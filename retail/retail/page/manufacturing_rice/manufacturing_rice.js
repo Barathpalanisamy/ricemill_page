@@ -39,6 +39,10 @@ make_form() {
 		  fieldname:"html1",
 		  fieldtype: "HTML",
 	  },
+	  {
+		fieldname:"html2",
+		fieldtype: "HTML",
+	},
 
 	],
 	

@@ -1,6 +1,5 @@
 import frappe
 from frappe.utils import time_diff_in_hours
-
 @frappe.whitelist()
 def setup(ricemill):
     html=''
@@ -22,27 +21,26 @@ def setup(ricemill):
                 </div>
                    <div>
                 <form action=#>
-                        <button class="button" onclick="myFunction()">Try it</button>
+                        <button class="button" onclick="myFunction('{ricemill}')">Try it</button>
                     </form>
                 </div>
                  <div>    
                     <div id="multi-step-form-container">
-                           {operation_tracking(bom)}
+                           {operation_tracking(ricemill)}
                     </div>
                 <div>
             '''
     return html+css_html()+script()
 
-def operation_tracking(bom):
+def operation_tracking(ricemill):
     operation_tracking='''
                 <div>   
                    <div id="multi-step-form-container">
                        <!-- Form Steps / Progress Bar -->
                        <ul class="form-stepper form-stepper-horizontal text-center mx-auto pl-0">'''
-    work_order=frappe.get_doc("Work Order",{"bom_no":bom.name})
+    work_order=frappe.get_doc("BOM",{"Item":ricemill})
     if work_order.operations:
         operation_tracking +=f'''
-        
                     { "".join([f"""
                     <li class="{"form-stepper-active" if(row == 0) else "form-stepper-unfinished"} text-center form-stepper-list" step="{row+1}">
                         <a class="mx-2">
@@ -54,7 +52,9 @@ def operation_tracking(bom):
                             </div>
                         </a>
                     </li>""" for row in range(len(work_order.operations))])
+                    
                     }
+                    
                 '''
     return operation_tracking+'</ul></div></div>'+fields_list(work_order)
 
@@ -244,17 +244,15 @@ def css_html():
 def script():
     script='''  
     <script>
-        function myFunction() {
+        function myFunction(ricemill) {
+
            var a= document.getElementById("qty").value;
            var b= document.getElementById("bom_name").value;
-           console.log("check")
-              console.log(a,b)
             frappe.call({
                     method: "retail.retail.page.manufacturing_rice.work_order.work_order_creation",
-                    args:{a:a,b:b},
-                   
+                    args:{a:a,b:b, c:ricemill},
+                    
                 });
-             console.log("check1");
             }
          
 
