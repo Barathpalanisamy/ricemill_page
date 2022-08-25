@@ -69,117 +69,21 @@ function myFunction(ricemill) {
       method:
         "retail.retail.page.manufacturing_rice.work_order.work_order_creation",
       args: { a: a, b: b, c: ricemill },
+	  callback(r){
+		frappe.call({
+			method: "retail.retail.page.manufacturing_rice.ricemill.function",
+			args: { ricemill: ricemill, workorder:r.message},
+			callback(r) {
+			  me.form.get_field("html1").html(r.message);
+			  document.getElementById("initialize").style.display = 'none'
+	  
+			  
+			},
+		  });
+
+	  }
+
     });
-    frappe.call({
-      method: "retail.retail.page.manufacturing_rice.ricemill.function",
-      args: { ricemill: ricemill },
-      callback(r) {
-        me.form.get_field("html1").html(r.message);
-		document.getElementById("initialize").style.display = 'none'
-		
-		
-      },
-    });
+   
   }
 }
-
-
-class Stopwatch {
-			constructor(display, results) {
-				me.running = false;
-				me.display = display;
-				me.results = results;
-				me.laps = [];
-				me.reset();
-				me.print(me.times);
-			}
-			
-			reset() {
-				me.times = [ 0, 0, 0 ];
-			}
-			
-			start() {
-				if (!me.time) me.time = performance.now();
-				if (!me.running) {
-					me.running = me;
-					requestAnimationFrame(me.step.bind(me));
-				}
-			}
-			
-			lap() {
-				let times = me.times;
-				let li = document.createElement('li');
-				li.innerText = me.format(times);
-				me.results.appendChild(li);
-			}
-			
-			stop() {
-				me.running = false;
-				me.time = null;
-			}
-
-			restart() {
-				if (!me.time) me.time = performance.now();
-				if (!me.running) {
-					me.running = true;
-					requestAnimationFrame(me.step.bind(me));
-				}
-				me.reset();
-			}
-			
-			clear() {
-				clearChildren(me.results);
-			}
-			
-			step(timestamp) {
-				if (!me.running) return;
-				me.calculate(timestamp);
-				me.time = timestamp;
-				me.print();
-				requestAnimationFrame(me.step.bind(me));
-			}
-			
-			calculate(timestamp) {
-				var diff = timestamp - me.time;
-				// Hundredths of a second are 100 ms
-				me.times[2] += diff / 10;
-				// Seconds are 100 hundredths of a second
-				if (me.times[2] >= 100) {
-					me.times[1] += 1;
-					me.times[2] -= 100;
-				}
-				// Minutes are 60 seconds
-				if (me.times[1] >= 60) {
-					me.times[0] += 1;
-					me.times[1] -= 60;
-				}
-			}
-			
-			print() {
-				me.display.innerText = me.format(this.times);
-			}
-			
-			format(times) {
-				return `\
-		${pad0(times[0], 2)}:\
-		${pad0(times[1], 2)}:\
-		${pad0(Math.floor(times[2]), 2)}`;
-			}
-		}
-
-		function pad0(value, count) {
-			var result = value.toString();
-			for (; result.length < count; --count)
-				result = '0' + result;
-			return result;
-		}
-
-		function clearChildren(node) {
-			while (node.lastChild)
-				node.removeChild(node.lastChild);
-		}
-
-		let stopwatch = new Stopwatch(
-			document.querySelector('.stopwatch'),
-			document.querySelector('.results'));
-

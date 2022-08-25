@@ -9,44 +9,41 @@ def setup(ricemill):
             <div id ="initialize">
                 <div> 
                     <form action=#>
-                    <label for="bom_name">BOM No</label><br>
-                    <input type="text" id="bom_name"  value="{bom.name}"><br>
+                        <label for="bom_name">BOM No</label><br>
+                        <input type="text" id="bom_name"  value="{bom.name}"><br>
                     </form>
                 </div>
                 <div>
                     <form action=#>
                         <label for="quantity">Quantity</label><br>
-                        <input type="text" id="qty"><br>
-                    </form>
+                        <input type="text" id="qty" required><br><br>
+                        <input type="submit" id="start_button" value="Start" class="button" onclick="myFunction('{ricemill}')">
+                      </form>
                 </div>
-                   <div>
-                   
-                <form action=#>
-                        <button id="start_button" class="button" onclick="myFunction('{ricemill}')">Start</button>
-                </form>
-                </div>
-                </div>
+            </div>
             '''
     return html+css_html()+script()
 
 @frappe.whitelist()
-def function(ricemill):
+def function(ricemill,workorder):
     function=f'''
                     <div id="multi-step-form-container">
-                           {operation_tracking(ricemill)}
+                           {operation_tracking(ricemill,workorder)}
                     </div>
     '''
     return setup(ricemill)+function+css_html()+script()
 
-
-def operation_tracking(ricemill):
+def operation_tracking(ricemill,workorder):
+    frappe.errprint(workorder)
     operation_tracking='''
                 <div>   
                    <div id="multi-step-form-container">
                        <!-- Form Steps / Progress Bar -->
                        <ul class="form-stepper form-stepper-horizontal text-center mx-auto pl-0">'''
-    work_order=frappe.get_doc("BOM",{"Item":ricemill})
-    if work_order.operations:
+
+    work_order=frappe.get_all("Job Card",{"work_order":workorder},pluck="operation")
+    frappe.errprint(work_order)
+    if work_order:
         operation_tracking +=f'''
                     { "".join([f"""
                     <li class="{"form-stepper-active" if(row == 0) else "form-stepper-unfinished"} text-center form-stepper-list" step="{row+1}">
@@ -55,11 +52,10 @@ def operation_tracking(ricemill):
                                 <span>{row+1}</span>
                             </span>
                             <div class="label">
-                                {work_order.operations[row].operation}
+                                {work_order[row]}
                             </div>
                         </a>
-                    </li>""" for row in range(len(work_order.operations))])
-                    
+                    </li>""" for row in range(len(work_order))])
                     }
                     
                 '''
@@ -67,18 +63,18 @@ def operation_tracking(ricemill):
 
 def fields_list(work_order):
     fields_list=' <form id="userAccountSetupForm" name="userAccountSetupForm" enctype="multipart/form-data" method="POST">'
-    for row in range(len(work_order.operations)):
+    for row in range(len(work_order)):
         fields_list+=f'''
                
                     <section id="step-{row+1}" class="form-step {"d-none" if(row != 0) else ""}">
-                        <h2 class="font-normal">{work_order.operations[row].operation}</h2>
+                        <h2 class="font-normal">{work_order[row]}</h2>
                         <div class="mt-3">
                         </div>
                             {job_card_cus_field()}
 
                         <div class="mt-3">
-                            {f"""<button class="button btn-navigate-form-step" type="button" step_number="{row+2}">Next</button>""" if(row+1 != len(work_order.operations)) else ""}
-                            {"""<button class="button submit-btn" type="submit">Finish</button>""" if(row+1 == len(work_order.operations)) else ""}
+                            {f"""<button class="button btn-navigate-form-step" type="button" step_number="{row+2}">Next</button>""" if(row+1 != len(work_order)) else ""}
+                            {"""<button class="button submit-btn" type="submit">Finish</button>""" if(row+1 == len(work_order)) else ""}
                         </div>
                     </section>  
                 '''
@@ -87,13 +83,24 @@ def fields_list(work_order):
 
 def job_card_cus_field():
     cus_field=f'''
-              <button class="button" onclick="stopwatch.start()">Start</button>
-               <button  class="button" onclick="stopwatch.lap()">Start</button>
-                <button  class="button" onclick="stopwatch.stop()">Start</button>
-                 <button  class="button" onclick="stopwatch.restart()">Start</button>
-                  <button class="button" onclick="stopwatch.clear()">Start</button>
-		<div class="stopwatch"></div>
-		<ul class="results"></ul>
+
+            <div>
+                    
+            </div>
+                    <div class="container">
+                        <div class="stopwatch">
+                            <span class="hours">00 : </span><span class="minutes">00 : </span>
+                            <span class="seconds">00</span>
+                        </div>
+                        <div class="buttons">
+                            <button type="button" class="startBtn">START</button>
+                            <button type="button" class="lapBtn">LAP</button>
+                            <button type="button" class="stopBtn">STOP</button>
+                        </div>
+                        <div class="laps">
+                            <p>LAPS-</p>
+                        </div>
+                    </div>
     '''
     return cus_field
 
@@ -257,60 +264,6 @@ def css_html():
                     .form-stepper a {
                         cursor: default;
                     }
-
-
-                        * {
-                        margin: 0;
-                        padding: 0;
-                        }
-
-                        html {
-                        background: #333;
-                        color: #bbb;
-                        font-family: Menlo;
-                        }
-
-                        .controls {
-                        position: fixed;
-                        text-align: center;
-                        top: 1em;
-                        width: 100%;
-                        }
-
-                        .button {
-                        color: #bbb;
-                        font-size: 15px;
-                        margin: 0 0.5em;
-                        text-decoration: none;
-                        }
-
-                        .button:first-child {
-                            margin-left: 0;
-                        }
-
-                        .button:last-child {
-                            margin-right: 0;
-                        }
-
-                        .button:hover {
-                        color: white;
-                        }
-
-                        .stopwatch {
-                        font-size: 150 px;
-                        }
-
-                        .results {
-                        border-color: lime;
-                        list-style: none;
-                        margin: 0;
-                        padding: 0;
-                        position: absolute;
-                        bottom: 0;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        }
-
                     </style>
 
     '''
@@ -348,6 +301,67 @@ def script():
                 });
             });
 
+                const hoursSpan = document.querySelector(".hours");
+                const minutesSpan = document.querySelector(".minutes");
+                const secondsSpan = document.querySelector(".seconds");
+                const startBtn = document.querySelector(".startBtn");
+                const lapBtn = document.querySelector(".lapBtn");
+                const stopBtn = document.querySelector(".stopBtn");
+                const laps = document.querySelector(".laps");
+
+                let hours = 0,
+                    minutes = 0,
+                    seconds = 0;
+
+                var stopwatch;
+
+                startBtn.addEventListener("click", () => {
+                startBtn.style.display = "none";
+                lapBtn.style.display = "inline-block";
+                stopBtn.style.display = "inline-block";
+
+                stopwatch = setInterval(() => {
+                    seconds++;
+                    if (seconds == 60) {
+                    seconds = 0;
+                    minutes++;
+                    }
+                    if (minutes == 60) {
+                    minutes = 0;
+                    hours++;
+                    }
+                    if (hours <= 9) hoursSpan.innerText = "0" + hours + " : ";
+                    else hoursSpan.innerText = hours + " : ";
+                    if (minutes <= 9) minutesSpan.innerText = "0" + minutes + " : ";
+                    else minutesSpan.innerText = minutes + " : ";
+                    if (seconds <= 9) secondsSpan.innerText = "0" + seconds;
+                    else secondsSpan.innerText = seconds;
+                }, 1000);
+                });
+
+                lapBtn.addEventListener("click", () => {
+                const lap = document.createElement("div");
+                lap.innerText = hours + " : " + minutes + " : " + seconds;
+                laps.appendChild(lap);
+                });
+
+                stopBtn.addEventListener("click", () => {
+                lapBtn.style.display = "none";
+                stopBtn.style.display = "none";
+                startBtn.style.display = "inline-block";
+
+                clearInterval(stopwatch);
+
+                hoursSpan.innerText = "00 : ";
+                minutesSpan.innerText = "00 : ";
+                secondsSpan.innerText = "00";
+
+                hours = 0;
+                minutes = 0;
+                seconds = 0;
+
+                laps.innerHTML = "<p>LAPS-</p>";
+                });
     </script>
 
     '''
