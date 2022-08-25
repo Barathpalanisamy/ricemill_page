@@ -1,14 +1,13 @@
 import frappe
 from frappe.utils import time_diff_in_hours
-
 @frappe.whitelist()
 def setup(ricemill):
     html=''
     if frappe.db.exists("Item", ricemill):
         bom=frappe.get_doc("BOM",{"Item":ricemill})
         html = f'''
-            <div>
-                <div'> 
+            <div id ="initialize">
+                <div> 
                     <form action=#>
                     <label for="bom_name">BOM No</label><br>
                     <input type="text" id="bom_name"  value="{bom.name}"><br>
@@ -21,28 +20,34 @@ def setup(ricemill):
                     </form>
                 </div>
                    <div>
+                   
                 <form action=#>
-                        <button class="button" onclick="myFunction()">Try it</button>
-                    </form>
+                        <button id="start_button" class="button" onclick="myFunction('{ricemill}')">Start</button>
+                </form>
                 </div>
-                 <div>    
-                    <div id="multi-step-form-container">
-                           {operation_tracking(bom)}
-                    </div>
-                <div>
+                </div>
             '''
     return html+css_html()+script()
 
-def operation_tracking(bom):
+@frappe.whitelist()
+def function(ricemill):
+    function=f'''
+                    <div id="multi-step-form-container">
+                           {operation_tracking(ricemill)}
+                    </div>
+    '''
+    return setup(ricemill)+function+css_html()+script()
+
+
+def operation_tracking(ricemill):
     operation_tracking='''
                 <div>   
                    <div id="multi-step-form-container">
                        <!-- Form Steps / Progress Bar -->
                        <ul class="form-stepper form-stepper-horizontal text-center mx-auto pl-0">'''
-    work_order=frappe.get_doc("Work Order",{"bom_no":bom.name})
+    work_order=frappe.get_doc("BOM",{"Item":ricemill})
     if work_order.operations:
         operation_tracking +=f'''
-        
                     { "".join([f"""
                     <li class="{"form-stepper-active" if(row == 0) else "form-stepper-unfinished"} text-center form-stepper-list" step="{row+1}">
                         <a class="mx-2">
@@ -54,7 +59,9 @@ def operation_tracking(bom):
                             </div>
                         </a>
                     </li>""" for row in range(len(work_order.operations))])
+                    
                     }
+                    
                 '''
     return operation_tracking+'</ul></div></div>'+fields_list(work_order)
 
@@ -67,15 +74,29 @@ def fields_list(work_order):
                         <h2 class="font-normal">{work_order.operations[row].operation}</h2>
                         <div class="mt-3">
                         </div>
+                            {job_card_cus_field()}
+
                         <div class="mt-3">
                             {f"""<button class="button btn-navigate-form-step" type="button" step_number="{row+2}">Next</button>""" if(row+1 != len(work_order.operations)) else ""}
                             {"""<button class="button submit-btn" type="submit">Finish</button>""" if(row+1 == len(work_order.operations)) else ""}
                         </div>
-                    </section>     
-                
-
+                    </section>  
                 '''
     return fields_list + "</form>"
+
+
+def job_card_cus_field():
+    cus_field=f'''
+              <button class="button" onclick="stopwatch.start()">Start</button>
+               <button  class="button" onclick="stopwatch.lap()">Start</button>
+                <button  class="button" onclick="stopwatch.stop()">Start</button>
+                 <button  class="button" onclick="stopwatch.restart()">Start</button>
+                  <button class="button" onclick="stopwatch.clear()">Start</button>
+		<div class="stopwatch"></div>
+		<ul class="results"></ul>
+    '''
+    return cus_field
+
 
 def css_html():
     css_html='''
@@ -236,6 +257,60 @@ def css_html():
                     .form-stepper a {
                         cursor: default;
                     }
+
+
+                        * {
+                        margin: 0;
+                        padding: 0;
+                        }
+
+                        html {
+                        background: #333;
+                        color: #bbb;
+                        font-family: Menlo;
+                        }
+
+                        .controls {
+                        position: fixed;
+                        text-align: center;
+                        top: 1em;
+                        width: 100%;
+                        }
+
+                        .button {
+                        color: #bbb;
+                        font-size: 15px;
+                        margin: 0 0.5em;
+                        text-decoration: none;
+                        }
+
+                        .button:first-child {
+                            margin-left: 0;
+                        }
+
+                        .button:last-child {
+                            margin-right: 0;
+                        }
+
+                        .button:hover {
+                        color: white;
+                        }
+
+                        .stopwatch {
+                        font-size: 150 px;
+                        }
+
+                        .results {
+                        border-color: lime;
+                        list-style: none;
+                        margin: 0;
+                        padding: 0;
+                        position: absolute;
+                        bottom: 0;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        }
+
                     </style>
 
     '''
@@ -244,21 +319,6 @@ def css_html():
 def script():
     script='''  
     <script>
-        function myFunction() {
-           var a= document.getElementById("qty").value;
-           var b= document.getElementById("bom_name").value;
-           console.log("check")
-              console.log(a,b)
-            frappe.call({
-                    method: "retail.retail.page.manufacturing_rice.work_order.work_order_creation",
-                    args:{a:a,b:b},
-                   
-                });
-             console.log("check1");
-            }
-         
-
-
             const navigateToFormStep = (stepNumber) => {
                 document.querySelectorAll(".form-step").forEach((formStepElement) => {
                     formStepElement.classList.add("d-none");
@@ -292,3 +352,5 @@ def script():
 
     '''
     return script
+
+# def cus_field():
