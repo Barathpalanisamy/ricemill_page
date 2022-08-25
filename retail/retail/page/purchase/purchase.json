@@ -1,0 +1,19 @@
+{
+ "content": null,
+ "creation": "2022-08-23 11:44:39.043267",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2022-08-23 11:44:39.043267",
+ "modified_by": "Administrator",
+ "module": "Retail",
+ "name": "purchase",
+ "owner": "Administrator",
+ "page_name": "purchase",
+ "roles": [],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Purchase Invoice"
+}
