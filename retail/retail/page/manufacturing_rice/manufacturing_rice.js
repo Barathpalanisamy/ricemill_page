@@ -36,10 +36,19 @@ erpnext.Ricemill = class Ricemill {
           fieldtype: "Column Break",
         },
         {
-          label: "Bom No",
-          fieldname: "bom_no",
+          label: "Work Order",
+          fieldname: "work_order",
           fieldtype: "Link",
-          options: "BOM",
+          options: "Work Order",
+          change: () => frappe.call({
+            method: "retail.retail.page.manufacturing_rice.ricemill.function",
+            args: {workorder:this.form.get_value("work_order"),},
+            callback(r) {
+              me.form.get_field("html2").html(r.message);
+              document.getElementById("initialize").style.display = 'none'
+            },
+            })
+
         },
 
         {
@@ -72,18 +81,14 @@ function myFunction(ricemill) {
 	  callback(r){
 		frappe.call({
 			method: "retail.retail.page.manufacturing_rice.ricemill.function",
-			args: { ricemill: ricemill, workorder:r.message},
+			args: {workorder:r.message},
 			callback(r) {
 			  me.form.get_field("html1").html(r.message);
 			  document.getElementById("initialize").style.display = 'none'
-	  
-			  
 			},
 		  });
-
 	  }
-
     });
-   
   }
 }
+

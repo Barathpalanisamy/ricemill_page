@@ -20,6 +20,29 @@ def work_order_creation(a,b, c):
     return doc.name
 
 
+@frappe.whitelist()
+
+def jobcard_creation(fromtime,totime, totalhrs, jobname):
+    frappe.errprint(type(fromtime))
+    frappe.errprint(type(totime))
+    frappe.errprint(type(totalhrs))
+
+    qty=int(totalhrs)
+
+    if frappe.db.exists("Job Card",jobname):
+        a=frappe.get_doc("Job Card",jobname)
+        a.update(
+            {"time_logs":[{                           
+                            "from_time":fromtime,
+                            "to_time":totime,
+                            "completed_qty":qty,
+                        }]
+            }
+        )
+    a.save()
+    a.submit()
+       
+
 
 @frappe.whitelist()
 def make_stock_entry(work_order_id, purpose, qty=None):

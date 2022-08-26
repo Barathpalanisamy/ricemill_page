@@ -25,34 +25,32 @@ def setup(ricemill):
     return html+css_html()+script()
 
 @frappe.whitelist()
-def function(ricemill,workorder):
+def function(workorder):
     function=f'''
                     <div id="multi-step-form-container">
-                           {operation_tracking(ricemill,workorder)}
+                           {operation_tracking(workorder)}
                     </div>
     '''
-    return setup(ricemill)+function+css_html()+script()
+    return setup(frappe.get_value("Work Order",workorder,"production_item"))+function+css_html()
 
-def operation_tracking(ricemill,workorder):
-    frappe.errprint(workorder)
+def operation_tracking(workorder):
     operation_tracking='''
                 <div>   
                    <div id="multi-step-form-container">
                        <!-- Form Steps / Progress Bar -->
                        <ul class="form-stepper form-stepper-horizontal text-center mx-auto pl-0">'''
 
-    work_order=frappe.get_all("Job Card",{"work_order":workorder},pluck="operation")
-    frappe.errprint(work_order)
+    work_order=frappe.get_all("Job Card",{"work_order":workorder},["operation","name","status"])
     if work_order:
         operation_tracking +=f'''
                     { "".join([f"""
-                    <li class="{"form-stepper-active" if(row == 0) else "form-stepper-unfinished"} text-center form-stepper-list" step="{row+1}">
+                    <li class="{"form-stepper-active" if(row == 0 ) else "form-stepper-unfinished"} text-center form-stepper-list" step="{row+1}">
                         <a class="mx-2">
                             <span class="form-stepper-circle {"text-muted" if(row>0) else ""}">
                                 <span>{row+1}</span>
                             </span>
                             <div class="label">
-                                {work_order[row]}
+                                {work_order[row].operation}
                             </div>
                         </a>
                     </li>""" for row in range(len(work_order))])
@@ -67,14 +65,14 @@ def fields_list(work_order):
         fields_list+=f'''
                
                     <section id="step-{row+1}" class="form-step {"d-none" if(row != 0) else ""}">
-                        <h2 class="font-normal">{work_order[row]}</h2>
+                        <h2 class="font-normal">{work_order[row].operation}</h2>
                         <div class="mt-3">
                         </div>
                             {job_card_cus_field()}
 
                         <div class="mt-3">
-                            {f"""<button class="button btn-navigate-form-step" type="button" step_number="{row+2}">Next</button>""" if(row+1 != len(work_order)) else ""}
-                            {"""<button class="button submit-btn" type="submit">Finish</button>""" if(row+1 == len(work_order)) else ""}
+                            {f"""<button class="button btn-navigate-form-step" type="button"  jobcard="{work_order[row].name}" step_number="{row+2}">Next</button>""" if(row+1 != len(work_order)) else ""}
+                            {f"""<button class="button submit-btn" jobcard="{work_order[row].name}" type="submit">Finish</button>""" if(row+1 == len(work_order)) else ""}
                         </div>
                     </section>  
                 '''
@@ -83,24 +81,17 @@ def fields_list(work_order):
 
 def job_card_cus_field():
     cus_field=f'''
+    <div>
+          <form >
+                    <label for="from_time">From Time</label><br>
+                    <input type="datetime-local" id="from_time"><br>
+                    <label for="to_time">To Time</label><br>
+                    <input type="datetime-local" id="to_time"><br>
+                    <label for="total_hrs">Completed Quantity</label><br>
+                    <input type="text" id="total_time"><br>
 
-            <div>
-                    
-            </div>
-                    <div class="container">
-                        <div class="stopwatch">
-                            <span class="hours">00 : </span><span class="minutes">00 : </span>
-                            <span class="seconds">00</span>
-                        </div>
-                        <div class="buttons">
-                            <button type="button" class="startBtn">START</button>
-                            <button type="button" class="lapBtn">LAP</button>
-                            <button type="button" class="stopBtn">STOP</button>
-                        </div>
-                        <div class="laps">
-                            <p>LAPS-</p>
-                        </div>
-                    </div>
+            </form>
+    </div>
     '''
     return cus_field
 
@@ -272,7 +263,25 @@ def css_html():
 def script():
     script='''  
     <script>
-            const navigateToFormStep = (stepNumber) => {
+            let navigateToFormStep = (stepNumber,idclass) => {
+
+                    var fromtime=document.getElementById("from_time").value;
+                    var totime=document.getElementById("to_time").value;
+                    var totalhrs=document.getElementById("total_time").value;
+                    console.log(idclass)
+                
+                    if(fromtime && totime &&totalhrs){
+                        frappe.call({
+                            method:"retail.retail.page.manufacturing_rice.work_order.jobcard_creation",
+                            args:{fromtime:fromtime,totime:totime,totalhrs:totalhrs, jobname:idclass},
+                        })
+                    }
+
+
+               
+
+
+
                 document.querySelectorAll(".form-step").forEach((formStepElement) => {
                     formStepElement.classList.add("d-none");
                 });
@@ -282,11 +291,11 @@ def script():
                     formStepHeader.classList.remove("form-stepper-active", "form-stepper-completed");
                 });
                 document.querySelector("#step-" + stepNumber).classList.remove("d-none");
-                const formStepCircle = document.querySelector('li[step="' + stepNumber + '"]');
+                let formStepCircle = document.querySelector('li[step="' + stepNumber + '"]');
                 formStepCircle.classList.remove("form-stepper-unfinished", "form-stepper-completed");
                 formStepCircle.classList.add("form-stepper-active");  
                 for (let index = 0; index < stepNumber; index++) {     
-                    const formStepCircle = document.querySelector('li[step="' + index + '"]');     
+                    let formStepCircle = document.querySelector('li[step="' + index + '"]');     
                     if (formStepCircle) {
                         formStepCircle.classList.remove("form-stepper-unfinished", "form-stepper-active");
                         formStepCircle.classList.add("form-stepper-completed");
@@ -294,74 +303,18 @@ def script():
                 }
             };
 
+
             document.querySelectorAll(".btn-navigate-form-step").forEach((formNavigationBtn) => {
                 formNavigationBtn.addEventListener("click", () => {
-                    const stepNumber = parseInt(formNavigationBtn.getAttribute("step_number"));
-                    navigateToFormStep(stepNumber);
+                    let stepNumber = parseInt(formNavigationBtn.getAttribute("step_number"));
+                    let idclass = formNavigationBtn.getAttribute("jobcard");
+                    navigateToFormStep(stepNumber,idclass);
+                    console.log(formNavigationBtn)
+                    console.log(idclass)
                 });
             });
-
-                const hoursSpan = document.querySelector(".hours");
-                const minutesSpan = document.querySelector(".minutes");
-                const secondsSpan = document.querySelector(".seconds");
-                const startBtn = document.querySelector(".startBtn");
-                const lapBtn = document.querySelector(".lapBtn");
-                const stopBtn = document.querySelector(".stopBtn");
-                const laps = document.querySelector(".laps");
-
-                let hours = 0,
-                    minutes = 0,
-                    seconds = 0;
-
-                var stopwatch;
-
-                startBtn.addEventListener("click", () => {
-                startBtn.style.display = "none";
-                lapBtn.style.display = "inline-block";
-                stopBtn.style.display = "inline-block";
-
-                stopwatch = setInterval(() => {
-                    seconds++;
-                    if (seconds == 60) {
-                    seconds = 0;
-                    minutes++;
-                    }
-                    if (minutes == 60) {
-                    minutes = 0;
-                    hours++;
-                    }
-                    if (hours <= 9) hoursSpan.innerText = "0" + hours + " : ";
-                    else hoursSpan.innerText = hours + " : ";
-                    if (minutes <= 9) minutesSpan.innerText = "0" + minutes + " : ";
-                    else minutesSpan.innerText = minutes + " : ";
-                    if (seconds <= 9) secondsSpan.innerText = "0" + seconds;
-                    else secondsSpan.innerText = seconds;
-                }, 1000);
-                });
-
-                lapBtn.addEventListener("click", () => {
-                const lap = document.createElement("div");
-                lap.innerText = hours + " : " + minutes + " : " + seconds;
-                laps.appendChild(lap);
-                });
-
-                stopBtn.addEventListener("click", () => {
-                lapBtn.style.display = "none";
-                stopBtn.style.display = "none";
-                startBtn.style.display = "inline-block";
-
-                clearInterval(stopwatch);
-
-                hoursSpan.innerText = "00 : ";
-                minutesSpan.innerText = "00 : ";
-                secondsSpan.innerText = "00";
-
-                hours = 0;
-                minutes = 0;
-                seconds = 0;
-
-                laps.innerHTML = "<p>LAPS-</p>";
-                });
+        
+          
     </script>
 
     '''
