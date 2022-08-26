@@ -23,12 +23,7 @@ def work_order_creation(a,b, c):
 @frappe.whitelist()
 
 def jobcard_creation(fromtime,totime, totalhrs, jobname):
-    frappe.errprint(type(fromtime))
-    frappe.errprint(type(totime))
-    frappe.errprint(type(totalhrs))
-
     qty=int(totalhrs)
-
     if frappe.db.exists("Job Card",jobname):
         a=frappe.get_doc("Job Card",jobname)
         a.update(
@@ -78,4 +73,11 @@ def make_stock_entry(work_order_id, purpose, qty=None):
     stock_entry.set_serial_no_batch_for_finished_good()
     stock_entry.save()
     stock_entry.submit()
+
+
+@frappe.whitelist()
+def work_order_complete(workorder):
+    doc=frappe.get_doc("Work Order",workorder)
+    make_stock_entry(work_order_id=doc.name,purpose="Manufacture",qty= 1)
+    doc.submit()
     

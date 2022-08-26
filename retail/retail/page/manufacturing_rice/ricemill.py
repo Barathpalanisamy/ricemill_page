@@ -1,5 +1,11 @@
 import frappe
 from frappe.utils import time_diff_in_hours
+class classcheck:
+    def __init__(self, check):
+        self.check1=0
+        self.check2=0
+
+
 @frappe.whitelist()
 def setup(ricemill):
     html=''
@@ -31,22 +37,38 @@ def function(workorder):
                            {operation_tracking(workorder)}
                     </div>
     '''
-    return setup(frappe.get_value("Work Order",workorder,"production_item"))+function+css_html()
+    return function+css_html()
+def classname(status,check):
+    classlist= {"Open":"form-stepper-unfinished","first_open":"form-stepper-active","Completed":"form-stepper-completed"}
+    classname=""
+    if(status=="Completed"):
+        classname=classlist[status]
+
+    elif(status=="Open" and check.check1==0 ):
+        classname=classlist["first_open"]
+        check.check1=1
+    elif(status=="Open"):
+        classname=classlist[status]
+    return classname
+
 
 def operation_tracking(workorder):
+    check=classcheck(0)
+    
     operation_tracking='''
                 <div>   
                    <div id="multi-step-form-container">
                        <!-- Form Steps / Progress Bar -->
                        <ul class="form-stepper form-stepper-horizontal text-center mx-auto pl-0">'''
 
-    work_order=frappe.get_all("Job Card",{"work_order":workorder},["operation","name","status"])
+    work_order=frappe.get_all("Job Card",{"work_order":workorder},["operation","name","status"], order_by = "name")
     if work_order:
+        
         operation_tracking +=f'''
                     { "".join([f"""
-                    <li class="{"form-stepper-active" if(row == 0 ) else "form-stepper-unfinished"} text-center form-stepper-list" step="{row+1}">
+                    <li class=" {classname(work_order[row].status,check)} text-center form-stepper-list" step="{row+1}">
                         <a class="mx-2">
-                            <span class="form-stepper-circle {"text-muted" if(row>0) else ""}">
+                            <span class="form-stepper-circle">
                                 <span>{row+1}</span>
                             </span>
                             <div class="label">
@@ -54,10 +76,10 @@ def operation_tracking(workorder):
                             </div>
                         </a>
                     </li>""" for row in range(len(work_order))])
-                    }
-                    
+                    }    
                 '''
-    return operation_tracking+'</ul></div></div>'+fields_list(work_order)
+    return operation_tracking+'</ul></div></div>'+fields_list(work_order)+css_html()+script()
+
 
 def fields_list(work_order):
     fields_list=' <form id="userAccountSetupForm" name="userAccountSetupForm" enctype="multipart/form-data" method="POST">'
@@ -66,18 +88,15 @@ def fields_list(work_order):
                
                     <section id="step-{row+1}" class="form-step {"d-none" if(row != 0) else ""}">
                         <h2 class="font-normal">{work_order[row].operation}</h2>
-                        <div class="mt-3">
-                        </div>
                             {job_card_cus_field()}
 
                         <div class="mt-3">
                             {f"""<button class="button btn-navigate-form-step" type="button"  jobcard="{work_order[row].name}" step_number="{row+2}">Next</button>""" if(row+1 != len(work_order)) else ""}
-                            {f"""<button class="button submit-btn" jobcard="{work_order[row].name}" type="submit">Finish</button>""" if(row+1 == len(work_order)) else ""}
+                            {f"""<button class="button submit-btn" i onclick="finish()" jobcard="{work_order[row].name}" type="submit">Finish</button>""" if(row+1 == len(work_order)) else ""}
                         </div>
                     </section>  
                 '''
     return fields_list + "</form>"
-
 
 def job_card_cus_field():
     cus_field=f'''
@@ -89,7 +108,6 @@ def job_card_cus_field():
                     <input type="datetime-local" id="to_time"><br>
                     <label for="total_hrs">Completed Quantity</label><br>
                     <input type="text" id="total_time"><br>
-
             </form>
     </div>
     '''
@@ -263,34 +281,40 @@ def css_html():
 def script():
     script='''  
     <script>
-            let navigateToFormStep = (stepNumber,idclass) => {
+            let navigateToFormStep = async (stepNumber,idclass) => {
 
                     var fromtime=document.getElementById("from_time").value;
                     var totime=document.getElementById("to_time").value;
                     var totalhrs=document.getElementById("total_time").value;
-                    console.log(idclass)
                 
                     if(fromtime && totime &&totalhrs){
-                        frappe.call({
+                      await  frappe.call({
                             method:"retail.retail.page.manufacturing_rice.work_order.jobcard_creation",
                             args:{fromtime:fromtime,totime:totime,totalhrs:totalhrs, jobname:idclass},
                         })
+                     frappe.show_alert({
+                            message:__('Job Card Submitted'),
+                            indicator:'green'
+                        });
                     }
-
-
-               
-
-
+                    else {
+                        frappe.show_alert({
+                            message:__('Value is missing'),
+                            indicator:'red'
+                        });
+                        return 
+                    }
 
                 document.querySelectorAll(".form-step").forEach((formStepElement) => {
                     formStepElement.classList.add("d-none");
                 });
-                
+                console.log("xvsgcgs")
                 document.querySelectorAll(".form-stepper-list").forEach((formStepHeader) => {
                     formStepHeader.classList.add("form-stepper-unfinished");
                     formStepHeader.classList.remove("form-stepper-active", "form-stepper-completed");
                 });
                 document.querySelector("#step-" + stepNumber).classList.remove("d-none");
+                
                 let formStepCircle = document.querySelector('li[step="' + stepNumber + '"]');
                 formStepCircle.classList.remove("form-stepper-unfinished", "form-stepper-completed");
                 formStepCircle.classList.add("form-stepper-active");  
@@ -309,8 +333,7 @@ def script():
                     let stepNumber = parseInt(formNavigationBtn.getAttribute("step_number"));
                     let idclass = formNavigationBtn.getAttribute("jobcard");
                     navigateToFormStep(stepNumber,idclass);
-                    console.log(formNavigationBtn)
-                    console.log(idclass)
+            
                 });
             });
         

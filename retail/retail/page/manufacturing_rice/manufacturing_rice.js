@@ -44,8 +44,7 @@ erpnext.Ricemill = class Ricemill {
             method: "retail.retail.page.manufacturing_rice.ricemill.function",
             args: {workorder:this.form.get_value("work_order"),},
             callback(r) {
-              me.form.get_field("html2").html(r.message);
-              document.getElementById("initialize").style.display = 'none'
+              me.form.get_field("html1").html(r.message);
             },
             })
 
@@ -58,10 +57,7 @@ erpnext.Ricemill = class Ricemill {
           fieldname: "html1",
           fieldtype: "HTML",
         },
-        {
-          fieldname: "html2",
-          fieldtype: "HTML",
-        },
+       
       ],
 
       body: this.page.body,
@@ -79,16 +75,23 @@ function myFunction(ricemill) {
         "retail.retail.page.manufacturing_rice.work_order.work_order_creation",
       args: { a: a, b: b, c: ricemill },
 	  callback(r){
-		frappe.call({
-			method: "retail.retail.page.manufacturing_rice.ricemill.function",
-			args: {workorder:r.message},
-			callback(r) {
-			  me.form.get_field("html1").html(r.message);
-			  document.getElementById("initialize").style.display = 'none'
-			},
-		  });
+        me.form.get_field("work_order").set_value(r.message)
 	  }
     });
   }
 }
 
+
+
+function finish(){
+  frappe.call({
+    method:"retail.retail.page.manufacturing_rice.ricemill.fields_list",
+    args: {workorder:this.form.get_value("work_order"),},
+     callback(r){
+        me.form.get_field("work_order").set_value("")
+        me.form.get_field("item_to_manufacture").set_value("")
+	  }
+
+
+  })
+}
